@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo to PDF Converter</title>
+    <!-- Load jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Photo to PDF Converter</h2>
+        <input type="file" id="imageInput" accept="image/*" multiple>
+        <button onclick="convertToPDF()">Convert & Download PDF</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function convertToPDF() {
+            const fileInput = document.getElementById('imageInput');
+            const statusDiv = document.getElementById('status');
+
+            if (fileInput.files.length === 0) {
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Please select at least one image first!';
+                return;
+            }
+
+            statusDiv.style.color = '#333';
+            statusDiv.innerText = 'Processing images...';
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                
+                if (i > 0) {
+                    pdf.addPage();
+                }
+
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = function () {
+                            // Calculate proportions to fit A4 page nicely (Width: 190mm, Auto Height)
+                            const imgWidth = 190;
+                            const imgHeight = (img.height * imgWidth) / img.width;
+                            
+                            pdf.addImage(img, 'JPEG', 10, 10, imgWidth, imgHeight);
+                            resolve();
+                        };
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            pdf.save('converted-photos.pdf');
+            statusDiv.style.color = 'green';
+            statusDiv.innerText = 'PDF Generated and Downloaded Successfully!';
+        }
+    </script>
+
+</body>
+</html>

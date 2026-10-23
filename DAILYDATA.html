@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Data Processing Portal</title>
+    <!-- SheetJS Library Excel Read/Write ke liye -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #959955;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+        }
+        .upload-box {
+            border: 3px SOLID #256688;
+            padding: 25px;
+            text-align: center;
+            border-radius: 6px;
+            background: #f9fbfd;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            margin-top: 10px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #status {
+            font-weight: bold;
+            color: #007bff;
+            margin-top: 10px;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 ALIGN="CENTER">NOTIFICATION DATA CLEANING</h2>
+    
+    
+    <div class="upload-box">
+        <label for="excelFile"><b>file ane de </b></label><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+    </div>
+
+    <div id="status"></div>
+
+    <button id="downloadBtn" onclick="downloadProcessedExcel()">complete_formattedV2.xlsx Download </button>
+
+    <div class="table-container">
+        <table id="outputTable"></table>
+    </div>
+</div>
+
+<script>
+    let finalProcessedRows = [];
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('status').innerText = "File process ho rahi hai, please wait...";
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // Sheet ko 2D array mein convert karo
+                let rawData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                // Header row locate karna jisme 'Unit Name' ya 'Event' ho
+                let headerIndex = -1;
+                for (let i = 0; i < rawData.length; i++) {
+                    let rowStr = rawData[i].map(val => String(val).trim());
+                    if (rowStr.includes('Unit Name') || rowStr.includes('Event')) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex === -1) {
+                    alert("Error: Sheet mein 'Unit Name' ya 'Event' column nahi mila!");
+                    document.getElementById('status').innerText = "";
+                    return;
+                }
+
+                let headers = rawData[headerIndex].map(h => String(h).trim());
+                let rowsData = rawData.slice(headerIndex + 1);
+
+                // Objects ki list banana taaki pandas ki tarah filtering ho sake
+                let rowsObjects = [];
+                rowsData.forEach(r => {
+                    let obj = {};
+                    headers.forEach((h, index) => {
+                        obj[h] = r[index] !== undefined ? r[index] : "";
+                    });
+                    // Khaali rows hatane ke liye check
+                    if (obj['Unit Name'] && obj['Event']) {
+                        rowsObjects.push(obj);
+                    }
+                });
+
+                // Valid events filter
+                const validEvents = [
+                    'TC Al-khaldi Zone Overspeeding Notificaitons',
+                    'Al-Khaldi Truck BATTERY UNPLUGGED',
+                    'TC Sabic Stolen Zone',
+                    'TC Safe Drive More Than 4:00 Hours',
+                    'TC Accident',
+                    'Possible Accident',
+                    'Panic For Galileo',
+                    'SABIC PROJECT BATTERY UNPLUGGED'
+                ];
+
+                let filtered = rowsObjects.filter(row => {
+                    let ev = String(row['Event'] || '');
+                    let isPanic = ev.toLowerCase().includes('panic');
+                    let isValid = validEvents.includes(ev);
+                    return isValid || isPanic;
+                });
+
+                // Remove duplicate entries for same unit on same date
+                let uniqueMap = new Map();
+                filtered.forEach(row => {
+                    let unit = String(row['Unit Name'] || '').trim();
+                    let dateVal = row['Date'];
+                    let shortDate = "";
+                    if (dateVal) {
+                        let parsedDate = new Date(dateVal);
+                        if (!isNaN(parsedDate)) {
+                            shortDate = parsedDate.toISOString().split('T')[0];
+                        } else {
+                            shortDate = String(dateVal).split(' ')[0]; // fallback
+                        }
+                    }
+                    let key = unit + "_" + shortDate;
+                    if (!uniqueMap.has(key)) {
+                        uniqueMap.set(key, row); // keep first
+                    }
+                });
+
+                let dedupedList = Array.from(uniqueMap.values());
+
+                // Format Speed column & Mappings
+                dedupedList.forEach(row => {
+                    // Speed format
+                    let spd = String(row['Speed'] || '').trim();
+                    spd = spd.replace('K/H', '').trim();
+                    if (spd === 'nan' || spd === 'None' || spd === '') {
+                        row['Speed'] = '';
+                    } else {
+                        row['Speed'] = spd + 'K/H';
+                    }
+
+                    // Notification Type Mapping
+                    let ev = String(row['Event'] || '');
+                    let ntype = 'Other';
+                    if (ev === 'TC Al-khaldi Zone Overspeeding Notificaitons') ntype = 'Aramco Zone OverSpeeding';
+                    else if (ev === 'Al-Khaldi Truck BATTERY UNPLUGGED' || ev === 'SABIC PROJECT BATTERY UNPLUGGED') ntype = 'BATTERY UNPLUGGED';
+                    else if (ev === 'TC Sabic Stolen Zone') ntype = 'STOLEN ZONE ENTRY';
+                    else if (ev === 'TC Safe Drive More Than 4:00 Hours') ntype = 'SAFE DRIVE';
+                    else if (ev === 'TC Accident' || ev === 'Possible Accident') ntype = 'ACCIDENT';
+                    else if (ev === 'Panic For Galileo' || ev.toLowerCase().includes('panic')) ntype = 'PANIC';
+                    row['NOTIFICATION TYPE'] = ntype;
+
+                    // Door No & Plate No split('-')
+                    let unitName = String(row['Unit Name'] || '');
+                    let parts = unitName.split('-');
+                    row['DOOR NO'] = parts[0] ? parts[0].trim() : '';
+                    row['PLATE NO'] = parts.length > 1 ? parts.slice(1).join('-').trim() : '';
+
+                    // Remark Mapping
+                    let remark = '';
+                    if (ntype === 'Aramco Zone OverSpeeding') remark = 'warned driver to follow speed limit at Aramco zone (70 km/h)';
+                    else if (ntype === 'BATTERY UNPLUGGED') remark = 'Parked';
+                    else if (ntype === 'PANIC') remark = 'PRESS BY MISTAKE WHILE CLEANING';
+                    else if (ntype === 'SAFE DRIVE') remark = "Warn to driver, don't exceed more than 04:30 hour and take rest minimum 45min";
+                    else if (ntype === 'ACCIDENT') remark = 'JUMPED ON SKID ROAD/FALSE';
+                    else if (ntype === 'STOLEN ZONE ENTRY') remark = 'MOVING';
+                    row['REMARK'] = remark;
+
+                    // Address check
+                    if (!row['Address'] && !row['Location']) {
+                        row['Address'] = '';
+                    } else if (!row['Address'] && row['Location']) {
+                        row['Address'] = row['Location'];
+                    }
+                });
+
+                // Final columns formatting
+                finalProcessedRows = dedupedList.map(row => {
+                    return {
+                        'DOOR NO': row['DOOR NO'],
+                        'PLATE NO': row['PLATE NO'],
+                        'NOTIFICATION TYPE': row['NOTIFICATION TYPE'],
+                        'NOTIFICATION TIME & DATE': row['Date'] || '',
+                        'EVENT NAME': row['Event'] || '',
+                        'REMARK': row['REMARK'],
+                        'EXCEEDING SPEED': row['Speed'],
+                        'Address': row['Address'] || ''
+                    };
+                });
+
+                // Display HTML Table preview
+                displayPreview(finalProcessedRows);
+
+                document.getElementById('status').innerText = `Process successful! Total rows formatted: ${finalProcessedRows.length}`;
+                document.getElementById('downloadBtn').style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                alert("File processing mein error aayi hai: " + err.message);
+                document.getElementById('status').innerText = "";
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    });
+
+    function displayPreview(data) {
+        const table = document.getElementById('outputTable');
+        table.innerHTML = "";
+
+        if (data.length === 0) return;
+
+        // Headers
+        let headers = Object.keys(data[0]);
+        let tr = document.createElement('tr');
+        headers.forEach(h => {
+            let th = document.createElement('th');
+            th.innerText = h;
+            tr.appendChild(th);
+        });
+        table.appendChild(tr);
+
+        // Rows (Preview ke liye pehle 50 rows dikhayenge)
+        data.slice(0, 50).forEach(row => {
+            let tr = document.createElement('tr');
+            headers.forEach(h => {
+                let td = document.createElement('td');
+                td.innerText = row[h] !== undefined ? row[h] : "";
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+    }
+
+    function downloadProcessedExcel() {
+        if (finalProcessedRows.length === 0) return;
+
+        // SheetJS se Excel workbook banana
+        const worksheet = XLSX.utils.json_to_sheet(finalProcessedRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Processed Data");
+
+        // Download trigger karna
+        XLSX.writeFile(workbook, 'complete_formattedV2.xlsx');
+    }
+</script>
+
+</body>
+</html>

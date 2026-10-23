@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensors Data Extraction Portal</title>
+    <!-- SheetJS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+        }
+        .upload-box {
+           
+            padding: 25px;
+            text-align: center;
+            border-radius: 6px;
+            background: #f9fbfd;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            margin-top: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 10px;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+        th {
+            background-color: #28a745;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2> last-update</h2>
+    <p>Upload data for last update</p>
+    
+    <div class="upload-box">
+        <label for="excelFile"><b>Excel File Select</b></label><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+    </div>
+
+    <div id="status"></div>
+
+    <button id="downloadBtn" onclick="downloadReadyExcel()">ready.xlsx Download Karein</button>
+
+    <div class="table-container">
+        <table id="outputTable"></table>
+    </div>
+</div>
+
+<script>
+    let finalProcessedRows = [];
+
+    // Python function extract_sensor ka JS equivalent
+    function extractSensor(sensorData, sensorName) {
+        if (!sensorData) return "";
+        let parts = String(sensorData).split(",");
+        for (let part of parts) {
+            part = part.trim();
+            if (part.toLowerCase().startsWith(sensorName.toLowerCase() + " :")) {
+                return part;
+            }
+        }
+        return "";
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('status').innerText = "File process ho rahi hai...";
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // Sheet to JSON with header: 1 (Taaki rows index se access ho sakein, jaise pandas header=1)
+                let rawData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                if (rawData.length < 2) {
+                    alert("Error: File mein data kam hai!");
+                    document.getElementById('status').innerText = "";
+                    return;
+                }
+
+                // Python mein `pd.read_excel(..., header=1)` ka matlab hai row index 1 (yani doosri row) headers hai
+                let headers = rawData[1].map(h => String(h).trim());
+                let rowsData = rawData.slice(2); // row index 2 se data shuru
+
+                // Rows ko objects mein convert karna
+                let rowsObjects = [];
+                rowsData.forEach(r => {
+                    let obj = {};
+                    headers.javaScript ? null : null; // safe check
+                    headers.forEach((h, index) => {
+                        obj[h] = r[index] !== undefined ? r[index] : "";
+                    });
+                    rowsObjects.push(obj);
+                });
+
+                // Status column check hai ya nahi
+                let hasStatus = headers.includes("Status");
+
+                // Output DataFrame ki tarah data mapping
+                finalProcessedRows = rowsObjects.map(row => {
+                    let newRow = {};
+                    newRow["Unit Name"] = row["Unit Name"] || "";
+                    newRow["Last Update"] = row["Last Update"] || "";
+                    newRow["Location"] = row["Location"] || "";
+                    
+                    if (hasStatus) {
+                        newRow["Status"] = row["Status"] || "";
+                    }
+
+                    let sensorsVal = row["Sensors"] || "";
+                    newRow["Acc"] = extractSensor(sensorsVal, "Acc");
+                    newRow["Vehicle Battery"] = extractSensor(sensorsVal, "Vehicle Battery");
+
+                    return newRow;
+                });
+
+                // Table Preview dikhana (First 50 rows)
+                displayPreview(finalProcessedRows);
+
+                document.getElementById('status').innerText = `Process successful! Total rows: ${finalProcessedRows.length}`;
+                document.getElementById('downloadBtn').style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+                document.getElementById('status').innerText = "";
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    });
+
+    function displayPreview(data) {
+        const table = document.getElementById('outputTable');
+        table.innerHTML = "";
+        if (data.length === 0) return;
+
+        let headers = Object.keys(data[0]);
+        let tr = document.createElement('tr');
+        headers.forEach(h => {
+            let th = document.createElement('th');
+            th.innerText = h;
+            tr.appendChild(th);
+        });
+        table.appendChild(tr);
+
+        data.slice(0, 50).forEach(row => {
+            let tr = document.createElement('tr');
+            headers.forEach(h => {
+                let td = document.createElement('td');
+                td.innerText = row[h] !== undefined ? row[h] : "";
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+    }
+
+    function downloadReadyExcel() {
+        if (finalProcessedRows.length === 0) return;
+
+        const worksheet = XLSX.utils.json_to_sheet(finalProcessedRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Ready Data");
+
+        XLSX.writeFile(workbook, 'ready.xlsx');
+    }
+</script>
+
+</body>
+</html>
