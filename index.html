@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Khaldi - Employee Search</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background-color: var(--bg-color, #f1f5f9); 
+            color: var(--text-color, #334155);
+            font-family: var(--font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+            margin: 0; 
+            padding: 15px; 
+            transition: background 0.3s, font-family 0.3s;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { max-width: 600px; margin: 0 auto; width: 100%; flex: 1; }
+        
+        /* Top Control Bar */
+        .top-bar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        
+        .control-btn { 
+            background: linear-gradient(135deg, #3b0764, #581c87); 
+            color: #fbbf24; 
+            border: 2px solid #d97706; 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 13px; 
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.2); 
+            transition: 0.3s; 
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .control-btn:hover { 
+            background: linear-gradient(135deg, #581c87, #6b21a8); 
+            box-shadow: 0 6px 15px rgba(217, 119, 6, 0.4); 
+        }
+
+        /* Header with Gold Border Accent */
+        .header { 
+            text-align: center; 
+            color: #3b0764; 
+            margin-bottom: 20px; 
+            padding: 18px; 
+            background: #ffffff; 
+            border-radius: 14px; 
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            border: 2px solid #fbbf24;
+            border-bottom: 5px solid #d97706;
+        }
+        .header-logo {
+            width: 55px;
+            height: 55px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #000;
+            padding: 2px;
+            border: 1px solid #d97706;
+        }
+        .header h2 { margin: 0; font-size: 22px; font-weight: 700; }
+
+        /* Search Section */
+        .search-area { display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 14px; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.06); margin-bottom: 15px; flex-wrap: wrap; border: 1.5px solid #fde68a; }
+        .search-label { font-weight: bold; color: inherit; font-size: 14px; }
+        select { padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-size: 14px; font-weight: 600; color: #1e293b; outline: none; }
+        .input-group { display: flex; flex: 1; min-width: 180px; border: 1.5px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; }
+        .input-group input { border: none; padding: 10px 14px; width: 100%; font-size: 15px; outline: none; color: #000; }
+        .input-group button { background: #3b0764; color: #fbbf24; border: none; padding: 0 16px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .input-group button:hover { background: #581c87; }
+
+        #status { text-align: center; font-size: 14px; color: inherit; margin-bottom: 15px; font-weight: 600; opacity: 0.8; }
+
+        /* Driver Card Design */
+        .driver-card { 
+            background-color: var(--card-bg, #a6e6a4); 
+            border: 1.5px solid var(--card-border, #d97706); 
+            border-radius: 14px; 
+            padding: 18px; 
+            margin-bottom: 16px; 
+            box-shadow: 0 8px 20px rgba(217, 119, 6, 0.12); 
+            transition: transform 0.2s, background-color 0.3s, border-color 0.3s; 
+            color: #1e293b; 
+        }
+        .driver-card:hover { transform: translateY(-2px); }
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+        
+        .info-list { flex: 1; }
+        .info-list p { margin: 8px 0; font-size: 15px; color: #334155; line-height: 1.5; }
+        .info-list span.label { font-weight: bold; color: #7c3aed; display: inline-block; min-width: 80px; }
+        .info-list strong { color: #0f172a; font-size: 16px; }
+
+        /* Right Side Box */
+        .right-box { width: 110px; min-height: 110px; border: 2px dashed #d97706; border-radius: 10px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; text-align: center; }
+        .right-box .avatar { font-size: 30px; margin-bottom: 2px; }
+        .right-box .badge { font-size: 11px; font-weight: bold; color: #0f172a; background: #fef3c7; border: 1px solid #f59e0b; padding: 2px 6px; border-radius: 4px; margin-top: 3px; width: 100%; word-break: break-all; }
+
+        /* Bottom Action Buttons */
+        .card-actions { display: flex; justify-content: space-between; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(0,0,0,0.1); }
+        .btn { flex: 1; text-align: center; padding: 10px 8px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; color: white; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-call { background-color: #0284c7; }
+        .btn-wa { background-color: #16a34a; }
+        .btn-msg { background-color: #ea580c; }
+
+        /* Settings Modal Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+        .modal-content {
+            background: #1e293b;
+            color: #f8fafc;
+            width: 100%;
+            max-width: 420px;
+            padding: 22px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #d97706;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+        .modal-header h3 { margin: 0; color: #fbbf24; font-size: 18px; }
+        .close-btn { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+        
+        .section-title { font-size: 13px; font-weight: bold; color: #94a3b8; margin: 15px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .preset-btn {
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1.5px solid #475569;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: left;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .preset-btn:hover { border-color: #fbbf24; background: #334155; }
+
+        .color-picker-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            background: #0f172a;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            font-size: 14px;
+        }
+        .color-picker-row input[type="color"] {
+            border: none;
+            width: 35px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .modal-select {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1.5px solid #475569;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 20px;
+        }
+
+        .save-changes-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #7c3aed, #9333ea);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(147, 51, 234,.4);
+            transition: 0.2s;
+        }
+        .save-changes-btn:hover { background: linear-gradient(135deg, #9333ea, #a855f7); }
+
+        /* Footer Layout */
+        .directory-footer {
+            margin-top: 30px;
+            padding: 15px 10px;
+            font-size: 13px;
+            color: inherit;
+            opacity: 0.95;
+            font-weight: 600;
+            border-top: 2px solid #d97706;
+        }
+        .footer-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            text-align: center;
+        }
+        .footer-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .social-icon {
+            color: #d97706;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .social-icon:hover {
+            opacity: 0.7;
+            transform: scale(1.1);
+        }
+        .footer-signature {
+            font-style: italic;
+            font-size: 12px;
+            font-weight: bold;
+            color: #7c3aed;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <button class="control-btn" onclick="openSettingsModal()">⚙️ Settings</button>
+        <button class="control-btn" id="langBtn" onclick="toggleLanguage()">🌐 العربية</button>
+    </div>
+
+    <!-- Settings Modal Box -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Theme & Appearance</h3>
+                <button class="close-btn" onclick="closeSettingsModal()">×</button>
+            </div>
+            <div class="section-title" id="presetTitle">Quick Theme Presets</div>
+            <div class="preset-grid">
+                <button class="preset-btn" onclick="applyPreset('#0f172a', '#f8fafc', '#1e293b', '#475569')">🌙 Dark Slate</button>
+                <button class="preset-btn" onclick="applyPreset('#4a044e', '#fce7f3', '#581c87', '#9333ea')">💜 Al-Khaldi Purple</button>
+                <button class="preset-btn" onclick="applyPreset('#064e3b', '#d1fae5', '#065f46', '#059669')">🌲 Emerald Night</button>
+                <button class="preset-btn" onclick="applyPreset('#1e293b', '#e2e8f0', '#334155', '#64748b')">💧 Midnight Blue</button>
+                <button class="preset-btn" onclick="applyPreset('#000000', '#fbbf24', '#111827', '#d97706')">⚡ Cyber Gold</button>
+                <button class="preset-btn" onclick="applyPreset('#581c87', '#ffe4e6', '#831843', '#e11d48')">❤️ Crimson Red</button>
+            </div>
+            <div class="section-title" id="customTitle">Custom Color Pickers</div>
+            <div class="color-picker-row">
+                <span id="lblMainBg">Main Background:</span>
+                <input type="color" id="mainBgPicker" value="#f1f5f9" onchange="updateMainBg(this.value)">
+            </div>
+            <div class="color-picker-row">
+                <span id="lblCardBg">Card Background:</span>
+                <input type="color" id="cardBgPicker" value="#a6e6a4" onchange="updateCardBg(this.value)">
+            </div>
+            <div class="color-picker-row">
+                <span id="lblCardBorder">Card Borders:</span>
+                <input type="color" id="cardBorderPicker" value="#d97706" onchange="updateCardBorder(this.value)">
+            </div>
+            <div class="section-title" id="fontTitle">Font Style</div>
+            <select class="modal-select" id="fontSelect" onchange="updateFont(this.value)">
+                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Standard Modern (Default)</option>
+                <option value="Courier New, Courier, monospace">Courier New</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+            </select>
+            <button class="save-changes-btn" onclick="closeSettingsModal()" id="saveBtn">Save Changes</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAAmACIAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=" alt="Al-Khaldi Logo" class="header-logo" onerror="this.style.display='none'">
+        <h2 id="titleText">Al-Khaldi Employee Directory</h2>
+    </div>
+
+    <div class="search-area">
+        <span class="search-label" id="searchByLabel">Search By</span>
+        <select id="searchBy">
+            <option value="all" id="optAll">All</option>
+            <option value="id" id="optId">By ID</option>
+            <option value="door" id="optDoor">Door</option>
+            <option value="plate" id="optPlate">Plate</option>
+            <option value="mobile" id="optMobile">Mobile</option>
+            <option value="name" id="optName">Name</option>
+        </select>
+        <div class="input-group">
+            <input type="text" id="searchInput" placeholder="Enter details to search...">
+            <button type="button" onclick="filterDrivers()">🔍</button>
+        </div>
+    </div>
+
+    <div id="status">Loading data securely...</div>
+    <div id="resultsContainer"></div>
+</div>
+
+<footer class="directory-footer">
+    <div class="footer-content">
+        <div class="footer-group">
+            <a href="https://www.linkedin.com/in/furkan-ahmad-b87318238?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" class="social-icon" title="LinkedIn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+            </a>
+            <a href="mailto:furkan.albd@gmail.com" class="social-icon" title="Email">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.818l10 8.118 10-8.118v11.818h-20z"/>
+                </svg>
+            </a>
+        </div>
+        <span class="footer-signature" id="footerText">Design by Furkan Ahmad</span>
+        <div class="footer-group">
+            <a href="https://www.facebook.com/furkan.ahmad.77398" target="_blank" class="social-icon" title="Facebook">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                </svg>
+            </a>
+            <a href="https://wa.me/966596879308" target="_blank" class="social-icon" title="WhatsApp">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                </svg>
+            </a>
+            <a href="https://x.com/0cdd64f715e7464" target="_blank" class="social-icon" title="Twitter/X">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // 👇 YAHAN APNA APPS SCRIPT KA WEB APP URL PASTE KAREIN 👇
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqTnh9dcwuR8HFKk8Hd9C82HctwS928z-DxkiOJxsR3f17Ri8RNBYzZtD25aHZ0sY/exec";
+
+    let drivers = [];
+    let isDataLoaded = false;
+    let currentLang = "en";
+
+    async function initSheetScript() {
+        const statusEl = document.getElementById("status");
+        
+        try {
+            const response = await fetch(APPS_SCRIPT_URL);
+            const textResponse = await response.text();
+            
+            let result;
+            try {
+                result = JSON.parse(textResponse);
+            } catch (e) {
+                // Agar HTML login page return hua hai (matlab unauthorized/session out)
+                statusEl.innerText = "Authentication required. Please open this link in an authorized Google account session.";
+                return;
+            }
+
+            if (result.status === "error") {
+                statusEl.innerText = result.message;
+                return;
+            }
+
+            const rows = result.data.slice(1); // Headers chhod kar data uthana
+            
+            drivers = rows.map(row => ({
+                door: String(row[0] || "").trim(),
+                plate: String(row[1] || "").trim(),
+                id: String(row[2] || "").trim(),
+                name: String(row[3] || "").trim(),
+                project: String(row[4] || "").trim(),
+                mobile: String(row[5] || "").trim()
+            })).filter(d => d.door !== "DOOR NO." && (d.name !== "" || d.id !== ""));
+
+            isDataLoaded = true;
+            statusEl.innerText = translations[currentLang].readyPrompt;
+            document.getElementById("resultsContainer").innerHTML = "";
+
+        } catch (err) {
+            console.error("Fetch error:", err);
+            statusEl.innerText = "Failed to load data. Please ensure you are logged in with an authorized Google Account";
+        }
+    }
+
+    function openSettingsModal() {
+        document.getElementById("settingsModal").style.display = "flex";
+    }
+
+    function closeSettingsModal() {
+        document.getElementById("settingsModal").style.display = "none";
+    }
+
+    function applyPreset(bgColor, textColor, cardBgColor, cardBorderColor) {
+        document.documentElement.style.setProperty('--bg-color', bgColor);
+        document.documentElement.style.setProperty('--text-color', textColor);
+        document.documentElement.style.setProperty('--card-bg', cardBgColor);
+        document.documentElement.style.setProperty('--card-border', cardBorderColor);
+
+        document.getElementById("mainBgPicker").value = bgColor;
+        document.getElementById("cardBgPicker").value = cardBgColor;
+        document.getElementById("cardBorderPicker").value = cardBorderColor;
+    }
+
+    function updateMainBg(val) { document.documentElement.style.setProperty('--bg-color', val); }
+    function updateCardBg(val) { document.documentElement.style.setProperty('--card-bg', val); }
+    function updateCardBorder(val) { document.documentElement.style.setProperty('--card-border', val); }
+    function updateFont(fontVal) { document.documentElement.style.setProperty('--font-family', fontVal); }
+
+    const translations = {
+        en: {
+            dir: "ltr", langBtn: "🌐 العربية", title: "Al-Khaldi Employee Directory", searchBy: "Search By",
+            optAll: "All", optId: "By ID", optDoor: "Door", optPlate: "Plate", optMobile: "Mobile", optName: "Name",
+            placeholder: "Enter details to search...", loading: "Loading data, please wait...", readyPrompt: "Please enter ID, Door, Plate, or Mobile above to search.",
+            error: "Could not load data. Please check internet connection.", found: "Records Found: ", noResult: "No matching record found",
+            lblName: "Name -", lblId: "ID -", lblMob: "MOB -", lblProject: "Project -", noDoor: "No Door", noPlate: "No Plate",
+            btnCall: "Call 📞", btnWa: "WhatsApp 💬", btnMsg: "MSG ✉️", footer: "Design by Furkan Ahmad",
+            modalTitle: "Theme & Appearance", presetTitle: "Quick Theme Presets", customTitle: "Custom Color Pickers",
+            lblMainBg: "Main Background:", lblCardBg: "Card Background:", lblCardBorder: "Card Borders:", fontTitle: "Font Style", saveBtn: "Save Changes"
+        },
+        ar: {
+            dir: "rtl", langBtn: "🌐 English", title: "دليل موظفي الخالدي", searchBy: "البحث بواسطة",
+            optAll: "الكل", optId: "الرقم الوظيفي (ID)", optDoor: "رقم الباب (Door)", optPlate: "رقم اللوحة (Plate)", optMobile: "رقم الجوال (Mobile)", optName: "الاسم (Name)",
+            placeholder: "أدخل البيانات للبحث...", loading: "جاري تحميل البيانات، يرجى الانتظار...", readyPrompt: "يرجى إدخال الرقم الوظيفي أو رقم الباب أو اللوحة أو الجوال للبحث.",
+            error: "تعذر تحميل البيانات. يرجى التحقق من الاتصال بالإنترنت.", found: "عدد النتائج: ", noResult: "لم يتم العثور على نتائج",
+            lblName: "الاسم -", lblId: "الرقم -", lblMob: "الجوال -", lblProject: "المشروع -", noDoor: "بدون باب", noPlate: "بدون لوحة",
+            btnCall: "اتصال 📞", btnWa: "واتساب 💬", btnMsg: "رسالة ✉️", footer: "Design by Furkan Ahmad",
+            modalTitle: "المظهر والسمات", presetTitle: "الإعدادات السريعة للمظهر", customTitle: "اختيار الألوان المخصصة",
+            lblMainBg: "خلفية الصفحة الرئيسية:", lblCardBg: "خلفية البطاقة:", lblCardBorder: "حدود البطاقات:", fontTitle: "نوع الخط", saveBtn: "حفظ التغييرات"
+        }
+    };
+
+    function toggleLanguage() {
+        currentLang = currentLang === "en" ? "ar" : "en";
+        applyLanguage();
+    }
+
+    function applyLanguage() {
+        const t = translations[currentLang];
+        document.documentElement.lang = currentLang;
+        document.documentElement.dir = t.dir;
+
+        document.getElementById("langBtn").innerText = t.langBtn;
+        document.getElementById("titleText").innerText = t.title;
+        document.getElementById("searchByLabel").innerText = t.searchBy;
+        document.getElementById("optAll").innerText = t.optAll;
+        document.getElementById("optId").innerText = t.optId;
+        document.getElementById("optDoor").innerText = t.optDoor;
+        document.getElementById("optPlate").innerText = t.optPlate;
+        document.getElementById("optMobile").innerText = t.optMobile;
+        document.getElementById("optName").innerText = t.optName;
+        document.getElementById("searchInput").placeholder = t.placeholder;
+        document.getElementById("footerText").innerText = t.footer;
+
+        document.getElementById("modalTitle").innerText = t.modalTitle;
+        document.getElementById("presetTitle").innerText = t.presetTitle;
+        document.getElementById("customTitle").innerText = t.customTitle;
+        document.getElementById("lblMainBg").innerText = t.lblMainBg;
+        document.getElementById("lblCardBg").innerText = t.lblCardBg;
+        document.getElementById("lblCardBorder").innerText = t.lblCardBorder;
+        document.getElementById("fontTitle").innerText = t.fontTitle;
+        document.getElementById("saveBtn").innerText = t.saveBtn;
+
+        if (!isDataLoaded) {
+            document.getElementById("status").innerText = t.loading;
+        } else {
+            filterDrivers();
+        }
+    }
+
+    function formatPhoneForCall(mob) {
+        let clean = String(mob).replace(/\D/g, '');
+        if (clean.length === 9 && clean.startsWith('5')) return '0' + clean;
+        return clean;
+    }
+
+    function formatPhoneForWA(mob) {
+        let clean = String(mob).replace(/\D/g, '');
+        if (clean.length === 9 && clean.startsWith('5')) return '966' + clean;
+        else if (clean.length === 10 && clean.startsWith('05')) return '966' + clean.substring(1);
+        return clean;
+    }
+
+    function renderCards(list) {
+        const container = document.getElementById("resultsContainer");
+        const t = translations[currentLang];
+
+        if (list.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 25px; color:#64748b; font-weight:bold; background:#fff; border-radius:12px;">${t.noResult}</div>`;
+            return;
+        }
+
+        let html = "";
+        list.forEach(d => {
+            const callNum = formatPhoneForCall(d.mobile);
+            const waNum = formatPhoneForWA(d.mobile);
+
+            html += `
+            <div class="driver-card">
+                <div class="card-top">
+                    <div class="info-list">
+                        <p><span class="label">${t.lblName}</span> <strong>${d.name}</strong></p>
+                        <p><span class="label">${t.lblId}</span> ${d.id}</p>
+                        <p><span class="label">${t.lblMob}</span> <span dir="ltr">${d.mobile}</span></p>
+                        <p><span class="label">${t.lblProject}</span> ${d.project}</p>
+                    </div>
+                    <div class="right-box">
+                        <div class="avatar">👨‍✈️</div>
+                        <div class="badge" dir="ltr">${d.door || t.noDoor}</div>
+                        <div class="badge" dir="ltr" style="background:#fef3c7; color:#b45309; border:1px solid #f59e0b;">${d.plate || t.noPlate}</div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <a href="tel:${callNum}" class="btn btn-call">${t.btnCall}</a>
+                    <a href="https://wa.me/${waNum}" target="_blank" class="btn btn-wa">${t.btnWa}</a>
+                    <a href="sms:${callNum}" class="btn btn-msg">${t.btnMsg}</a>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function filterDrivers() {
+        if (!isDataLoaded) return;
+
+        const t = translations[currentLang];
+        const type = document.getElementById("searchBy").value;
+        const term = document.getElementById("searchInput").value.toLowerCase().trim();
+
+        if (!term) {
+            document.getElementById("status").innerText = t.readyPrompt;
+            document.getElementById("resultsContainer").innerHTML = "";
+            return;
+        }
+
+        const filtered = drivers.filter(d => {
+            if (type === "id") return d.id.toLowerCase().includes(term);
+            if (type === "door") return d.door.toLowerCase().includes(term);
+            if (type === "plate") return d.plate.toLowerCase().includes(term);
+            if (type === "mobile") return d.mobile.toLowerCase().includes(term);
+            if (type === "name") return d.name.toLowerCase().includes(term);
+            return (
+                d.id.toLowerCase().includes(term) ||
+                d.door.toLowerCase().includes(term) ||
+                d.plate.toLowerCase().includes(term) ||
+                d.mobile.toLowerCase().includes(term) ||
+                d.name.toLowerCase().includes(term) ||
+                d.project.toLowerCase().includes(term)
+            );
+        });
+
+        document.getElementById("status").innerText = `${t.found}${filtered.length}`;
+        renderCards(filtered.slice(0, 50));
+    }
+
+    document.getElementById("searchInput").addEventListener("input", filterDrivers);
+    document.getElementById("searchBy").addEventListener("change", filterDrivers);
+
+    // Initial Load Call
+    initSheetScript();
+</script>
+
+</body>
+</html>
