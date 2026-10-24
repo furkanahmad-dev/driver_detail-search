@@ -1,0 +1,12 @@
+{
+  "background_color": "#2e904e",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Al-Khaldi Driver Search",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Driver Search",
+  "start_url": "/",
+  "theme_color": "#691b1b",
+  "id": "Al-KhaldiDriverSearch"
+}
