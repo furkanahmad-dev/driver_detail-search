@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Al-Khaldi - Driver details Search</title>
+    <!-- PWA Manifest & Theme Color -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b0764">
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -265,6 +268,7 @@
 
 <div class="container">
     <div class="top-bar">
+        <button class="control-btn" id="refreshBtn" onclick="refreshData()">🔄 Refresh Data</button>
         <button class="control-btn" onclick="openSettingsModal()">⚙️ Settings</button>
         <button class="control-btn" id="langBtn" onclick="toggleLanguage()">🌐 العربية</button>
     </div>
@@ -325,7 +329,7 @@
             <option value="name" id="optName">Name</option>
         </select>
         <div class="input-group">
-            <input type="text" id="searchInput" placeholder="Enter details to search...">
+            <input type="text" id="searchInput" placeholder="Enter details to search..." oninput="filterDrivers()">
             <button type="button" onclick="filterDrivers()">🔍</button>
         </div>
     </div>
@@ -370,230 +374,46 @@
 </footer>
 
 <script>
-    // 👇 YAHAN APNA APPS SCRIPT KA WEB APP URL PASTE KAREIN 👇
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMvr4NZNh5JAOTBR_k_IioingXwsM5pDigJ1v_C3_Pak2O0kFeJeuC4wahfsTgXXSI2w/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMvr4NZNh5JAOTBR_k_IioingXwsM5pDigJ1v_C3_Pak2O0kFeJeuC4wahfsTgXXSI2w/exec";
     let drivers = [];
     let isDataLoaded = false;
     let currentLang = "en";
 
-    async function initSheetScript() {
-        const statusEl = document.getElementById("status");
-        
-        try {
-            const response = await fetch(APPS_SCRIPT_URL);
-            const textResponse = await response.text();
-            
-            let result;
-            try {
-                result = JSON.parse(textResponse);
-            } catch (e) {
-                // Agar HTML login page return hua hai (matlab unauthorized/session out)
-                statusEl.innerText = "Authentication required. Please open this link in an authorized Google account session.";
-                return;
-            }
-
-            if (result.status === "error") {
-                statusEl.innerText = result.message;
-                return;
-            }
-
-            const rows = result.data.slice(1); // Headers chhod kar data uthana
-            
-            drivers = rows.map(row => ({
-                door: String(row[0] || "").trim(),
-                plate: String(row[1] || "").trim(),
-                id: String(row[2] || "").trim(),
-                name: String(row[3] || "").trim(),
-                project: String(row[4] || "").trim(),
-                mobile: String(row[5] || "").trim()
-            })).filter(d => d.door !== "DOOR NO." && (d.name !== "" || d.id !== ""));
-
-            isDataLoaded = true;
-            statusEl.innerText = translations[currentLang].readyPrompt;
-            document.getElementById("resultsContainer").innerHTML = "";
-
-        } catch (err) {
-            console.error("Fetch error:", err);
-            statusEl.innerText = "Failed to load data. Please ensure you are logged in with an authorized Google Account";
-        }
-    }
-
-    function openSettingsModal() {
-        document.getElementById("settingsModal").style.display = "flex";
-    }
-
-    function closeSettingsModal() {
-        document.getElementById("settingsModal").style.display = "none";
-    }
-
-    function applyPreset(bgColor, textColor, cardBgColor, cardBorderColor) {
-        document.documentElement.style.setProperty('--bg-color', bgColor);
-        document.documentElement.style.setProperty('--text-color', textColor);
-        document.documentElement.style.setProperty('--card-bg', cardBgColor);
-        document.documentElement.style.setProperty('--card-border', cardBorderColor);
-
-        document.getElementById("mainBgPicker").value = bgColor;
-        document.getElementById("cardBgPicker").value = cardBgColor;
-        document.getElementById("cardBorderPicker").value = cardBorderColor;
-    }
-
-    function updateMainBg(val) { document.documentElement.style.setProperty('--bg-color', val); }
-    function updateCardBg(val) { document.documentElement.style.setProperty('--card-bg', val); }
-    function updateCardBorder(val) { document.documentElement.style.setProperty('--card-border', val); }
-    function updateFont(fontVal) { document.documentElement.style.setProperty('--font-family', fontVal); }
-
     const translations = {
         en: {
-            dir: "ltr", langBtn: "🌐 العربية", title: "Al-Khaldi Employee Directory", searchBy: "Search By",
-            optAll: "All", optId: "By ID", optDoor: "Door", optPlate: "Plate", optMobile: "Mobile", optName: "Name",
-            placeholder: "Enter details to search...", loading: "Loading data, please wait...", readyPrompt: "Please enter ID, Door, Plate, or Mobile above to search.",
-            error: "Could not load data. Please check internet connection.", found: "Records Found: ", noResult: "No matching record found",
-            lblName: "Name -", lblId: "ID -", lblMob: "MOB -", lblProject: "Project -", noDoor: "No Door", noPlate: "No Plate",
-            btnCall: "Call 📞", btnWa: "WhatsApp 💬", btnMsg: "MSG ✉️", footer: "Design by Furkan Ahmad",
-            modalTitle: "Theme & Appearance", presetTitle: "Quick Theme Presets", customTitle: "Custom Color Pickers",
-            lblMainBg: "Main Background:", lblCardBg: "Card Background:", lblCardBorder: "Card Borders:", fontTitle: "Font Style", saveBtn: "Save Changes"
+            title: "Al-Khaldi All Drivers Details",
+            searchBy: "Search By",
+            optAll: "All",
+            optId: "By ID",
+            optDoor: "Door",
+            optPlate: "Plate",
+            optMobile: "Mobile",
+            optName: "Name",
+            placeholder: "Enter details to search...",
+            loading: "Loading data securely...",
+            readyPrompt: "Data loaded successfully. Type above to search drivers.",
+            offlinePrompt: "You are offline. Loaded cached driver records.",
+            refreshing: "Refreshing data from Google Sheets...",
+            refreshSuccess: "Data updated successfully from server!",
+            call: "Call",
+            whatsapp: "WhatsApp",
+            sms: "SMS",
+            doorLbl: "Door:",
+            plateLbl: "Plate:",
+            idLbl: "ID:",
+            nameLbl: "Name:",
+            projectLbl: "Project:",
+            mobileLbl: "Mobile:"
         },
         ar: {
-            dir: "rtl", langBtn: "🌐 English", title: "دليل موظفي الخالدي", searchBy: "البحث بواسطة",
-            optAll: "الكل", optId: "الرقم الوظيفي (ID)", optDoor: "رقم الباب (Door)", optPlate: "رقم اللوحة (Plate)", optMobile: "رقم الجوال (Mobile)", optName: "الاسم (Name)",
-            placeholder: "أدخل البيانات للبحث...", loading: "جاري تحميل البيانات، يرجى الانتظار...", readyPrompt: "يرجى إدخال الرقم الوظيفي أو رقم الباب أو اللوحة أو الجوال للبحث.",
-            error: "تعذر تحميل البيانات. يرجى التحقق من الاتصال بالإنترنت.", found: "عدد النتائج: ", noResult: "لم يتم العثور على نتائج",
-            lblName: "الاسم -", lblId: "الرقم -", lblMob: "الجوال -", lblProject: "المشروع -", noDoor: "بدون باب", noPlate: "بدون لوحة",
-            btnCall: "اتصال 📞", btnWa: "واتساب 💬", btnMsg: "رسالة ✉️", footer: "Design by Furkan Ahmad",
-            modalTitle: "المظهر والسمات", presetTitle: "الإعدادات السريعة للمظهر", customTitle: "اختيار الألوان المخصصة",
-            lblMainBg: "خلفية الصفحة الرئيسية:", lblCardBg: "خلفية البطاقة:", lblCardBorder: "حدود البطاقات:", fontTitle: "نوع الخط", saveBtn: "حفظ التغييرات"
-        }
-    };
-
-    function toggleLanguage() {
-        currentLang = currentLang === "en" ? "ar" : "en";
-        applyLanguage();
-    }
-
-    function applyLanguage() {
-        const t = translations[currentLang];
-        document.documentElement.lang = currentLang;
-        document.documentElement.dir = t.dir;
-
-        document.getElementById("langBtn").innerText = t.langBtn;
-        document.getElementById("titleText").innerText = t.title;
-        document.getElementById("searchByLabel").innerText = t.searchBy;
-        document.getElementById("optAll").innerText = t.optAll;
-        document.getElementById("optId").innerText = t.optId;
-        document.getElementById("optDoor").innerText = t.optDoor;
-        document.getElementById("optPlate").innerText = t.optPlate;
-        document.getElementById("optMobile").innerText = t.optMobile;
-        document.getElementById("optName").innerText = t.optName;
-        document.getElementById("searchInput").placeholder = t.placeholder;
-        document.getElementById("footerText").innerText = t.footer;
-
-        document.getElementById("modalTitle").innerText = t.modalTitle;
-        document.getElementById("presetTitle").innerText = t.presetTitle;
-        document.getElementById("customTitle").innerText = t.customTitle;
-        document.getElementById("lblMainBg").innerText = t.lblMainBg;
-        document.getElementById("lblCardBg").innerText = t.lblCardBg;
-        document.getElementById("lblCardBorder").innerText = t.lblCardBorder;
-        document.getElementById("fontTitle").innerText = t.fontTitle;
-        document.getElementById("saveBtn").innerText = t.saveBtn;
-
-        if (!isDataLoaded) {
-            document.getElementById("status").innerText = t.loading;
-        } else {
-            filterDrivers();
-        }
-    }
-
-    function formatPhoneForCall(mob) {
-        let clean = String(mob).replace(/\D/g, '');
-        if (clean.length === 9 && clean.startsWith('5')) return '0' + clean;
-        return clean;
-    }
-
-    function formatPhoneForWA(mob) {
-        let clean = String(mob).replace(/\D/g, '');
-        if (clean.length === 9 && clean.startsWith('5')) return '966' + clean;
-        else if (clean.length === 10 && clean.startsWith('05')) return '966' + clean.substring(1);
-        return clean;
-    }
-
-    function renderCards(list) {
-        const container = document.getElementById("resultsContainer");
-        const t = translations[currentLang];
-
-        if (list.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding: 25px; color:#64748b; font-weight:bold; background:#fff; border-radius:12px;">${t.noResult}</div>`;
-            return;
-        }
-
-        let html = "";
-        list.forEach(d => {
-            const callNum = formatPhoneForCall(d.mobile);
-            const waNum = formatPhoneForWA(d.mobile);
-
-            html += `
-            <div class="driver-card">
-                <div class="card-top">
-                    <div class="info-list">
-                        <p><span class="label">${t.lblName}</span> <strong>${d.name}</strong></p>
-                        <p><span class="label">${t.lblId}</span> ${d.id}</p>
-                        <p><span class="label">${t.lblMob}</span> <span dir="ltr">${d.mobile}</span></p>
-                        <p><span class="label">${t.lblProject}</span> ${d.project}</p>
-                    </div>
-                    <div class="right-box">
-                        <div class="avatar">👨‍✈️</div>
-                        <div class="badge" dir="ltr">${d.door || t.noDoor}</div>
-                        <div class="badge" dir="ltr" style="background:#fef3c7; color:#b45309; border:1px solid #f59e0b;">${d.plate || t.noPlate}</div>
-                    </div>
-                </div>
-                <div class="card-actions">
-                    <a href="tel:${callNum}" class="btn btn-call">${t.btnCall}</a>
-                    <a href="https://wa.me/${waNum}" target="_blank" class="btn btn-wa">${t.btnWa}</a>
-                    <a href="sms:${callNum}" class="btn btn-msg">${t.btnMsg}</a>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-    }
-
-    function filterDrivers() {
-        if (!isDataLoaded) return;
-
-        const t = translations[currentLang];
-        const type = document.getElementById("searchBy").value;
-        const term = document.getElementById("searchInput").value.toLowerCase().trim();
-
-        if (!term) {
-            document.getElementById("status").innerText = t.readyPrompt;
-            document.getElementById("resultsContainer").innerHTML = "";
-            return;
-        }
-
-        const filtered = drivers.filter(d => {
-            if (type === "id") return d.id.toLowerCase().includes(term);
-            if (type === "door") return d.door.toLowerCase().includes(term);
-            if (type === "plate") return d.plate.toLowerCase().includes(term);
-            if (type === "mobile") return d.mobile.toLowerCase().includes(term);
-            if (type === "name") return d.name.toLowerCase().includes(term);
-            return (
-                d.id.toLowerCase().includes(term) ||
-                d.door.toLowerCase().includes(term) ||
-                d.plate.toLowerCase().includes(term) ||
-                d.mobile.toLowerCase().includes(term) ||
-                d.name.toLowerCase().includes(term) ||
-                d.project.toLowerCase().includes(term)
-            );
-        });
-
-        document.getElementById("status").innerText = `${t.found}${filtered.length}`;
-        renderCards(filtered.slice(0, 50));
-    }
-
-    document.getElementById("searchInput").addEventListener("input", filterDrivers);
-    document.getElementById("searchBy").addEventListener("change", filterDrivers);
-
-    // Initial Load Call
-    initSheetScript();
-</script>
-
-</body>
-</html>
+            title: "شركة الخالدي - تفاصيل جميع السائقين",
+            searchBy: "البحث بواسطة",
+            optAll: "الكل",
+            optId: "رقم الهوية",
+            optDoor: "رقم الباب",
+            optPlate: "رقم اللوحة",
+            optMobile: "رقم الجوال",
+            optName: "الاسم",
+            placeholder: "أدخل التفاصيل للبحث...",
+            loading: "جاري تحميل البيانات...",
+            readyPromp
