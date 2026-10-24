@@ -374,6 +374,7 @@
 </footer>
 
 <script>
+    if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMvr4NZNh5JAOTBR_k_IioingXwsM5pDigJ1v_C3_Pak2O0kFeJeuC4wahfsTgXXSI2w/exec";
     let drivers = [];
     let isDataLoaded = false;
